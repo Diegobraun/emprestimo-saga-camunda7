@@ -75,11 +75,26 @@ O teste `assinaturaSemNinguemEsperandoEhDescartada` mostra isso: a assinatura en
 ### 5. Ordem das compensações
 Na demo, o 7 executou as compensações **sempre na ordem inversa** da execução (cancela o contrato, depois libera o limite). No 8 a ordem variou entre execuções. Mesmo assim, não dependa disso: se a ordem importar, desenhe a sequência no diagrama.
 
-### 6. Consistência das telas
+### 6. Ver a compensação acontecendo
+O Cockpit só mostra o que foi gravado no banco, e o 7 grava nos *wait states* e nos pontos `async`. Dois detalhes:
+
+- O 7 **ignora `asyncBefore` em handler de compensação**: os handlers rodam na transação do evento que dispara a compensação. O job log confirma: não é criado job para `CancelarContrato` nem para `LiberarLimite`.
+- Por isso o `asyncBefore` (com retry) fica nos throws `Compensar*`. Isso dá um ponto de gravação antes da compensação, e uma falha num handler faz o motor tentar a compensação de novo, em vez de desfazer tudo de volta até o passo anterior.
+
+Para dar tempo de olhar, ligue a câmera lenta. Cada service task espera N segundos antes de rodar:
+
+```bash
+curl -X PUT 'localhost:8086/camera-lenta?segundos=4'
+curl -X DELETE localhost:8086/camera-lenta
+```
+
+Com 4s, no Cockpit (aperte F5) o token passa por `Desembolsar`, fica uns 8s em `CompensarCancelada` enquanto os dois handlers rodam, e depois vai para `DesfechoCancelada`. No **History** cada handler aparece com o horário próprio.
+
+### 7. Consistência das telas
 - **7:** o Cockpit lê direto o banco do motor. O que você vê é o estado atual.
 - **8:** o Operate lê de um índice no Elasticsearch, atualizado com atraso. A busca de tarefas e incidentes pode não achar algo criado há meio segundo.
 
-### 7. Operação manual
+### 8. Operação manual
 | Ação | Cockpit 7 Community | Operate 8 |
 |---|---|---|
 | Ver incidente e dar Retry | sim | sim |

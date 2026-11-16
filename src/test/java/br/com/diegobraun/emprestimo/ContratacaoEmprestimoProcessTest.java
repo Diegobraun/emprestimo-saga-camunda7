@@ -181,6 +181,30 @@ class ContratacaoEmprestimoProcessTest {
         bpmn(p).isEnded().hasPassed("FimContratado");
     }
 
+    @Test
+    void operadorCancelaPorVariavelERetryECompensa() {
+        chaos.definir(new Chaos(true, false));
+        PropostaAberta p = abrir("cliente-bom-" + UUID.randomUUID(), "10000", "conta-2");
+        rodarJobs(p);
+        propostas.assinar(p.propostaId());
+
+        for (int tentativa = 0; tentativa < 5 && incidentes(p).isEmpty(); tentativa++) {
+            rodarJobs(p);
+            ClockUtil.setCurrentTime(new Date(ClockUtil.getCurrentTime().getTime() + 5_000));
+        }
+        assertThat(incidentes(p)).hasSize(1);
+
+        runtime.setVariable(p.processInstanceId(), "cancelarDesembolso", true);
+        Job job = management.createJobQuery().processInstanceId(p.processInstanceId()).singleResult();
+        management.setJobRetries(job.getId(), 1);
+        rodarJobs(p);
+
+        bpmn(p).isEnded().hasPassed("CancelarContrato", "LiberarLimite", "FimCancelada");
+        assertThat(core.lancamento(p.propostaId() + ":desembolso")).isEmpty();
+        assertThat(limites.reserva(p.propostaId())).map(LimiteService.Reserva::status).contains(LimiteService.Status.LIBERADA);
+        assertThat(contratos.contrato(p.propostaId())).map(ContratoService.Contrato::status).contains(ContratoService.Status.CANCELADO);
+    }
+
     private PropostaAberta abrir(String cliente, String valor, String conta) {
         PropostaAberta p = propostas.abrir(new NovaProposta(cliente, new BigDecimal(valor), 12, conta, "PT2H"));
         instancias.put(p.propostaId(), runtime.createProcessInstanceQuery().processInstanceId(p.processInstanceId()).singleResult());

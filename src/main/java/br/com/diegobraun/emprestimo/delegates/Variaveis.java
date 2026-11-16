@@ -18,6 +18,11 @@ final class Variaveis {
         return valor instanceof BigDecimal b ? b : new BigDecimal(String.valueOf(valor));
     }
 
+    static boolean sim(DelegateExecution execution, String nome) {
+        Object valor = execution.getVariable(nome);
+        return valor instanceof Boolean b ? b : "true".equalsIgnoreCase(String.valueOf(valor));
+    }
+
     static int inteiro(DelegateExecution execution, String nome) {
         return ((Number) execution.getVariable(nome)).intValue();
     }

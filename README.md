@@ -87,7 +87,15 @@ Na demo, o 7 executou as compensações **sempre na ordem inversa** da execuçã
 | Migrar instâncias de versão | sim | sim |
 | **Modificar instância** (mover o processo para outro ponto) | **não** (só na edição Enterprise) | sim |
 
-Por isso a compensação manual daqui é por REST:
+Mas dá para compensar pelo Cockpit Community usando o que ele tem: **editar variável** e **Retry**. O `Desembolsar` olha a variável `cancelarDesembolso` antes de chamar o core. Se ela for `true`, ele lança o mesmo `BpmnError("DESEMBOLSO_RECUSADO")` da conta inexistente, e o processo segue o caminho de compensação já desenhado. Num incidente:
+
+1. aba **Variables** → **Add variable**: `cancelarDesembolso`, tipo Boolean, valor `true`;
+2. aba **Incidents** → **Retry**;
+3. a instância termina em `CANCELADA_DESEMBOLSO`, com contrato cancelado e limite liberado.
+
+A decisão do operador vira dado do processo e fica no histórico, e o caminho percorrido é o do modelo. É o jeito comum de dar ao operador do 7 um "botão de cancelar" sem a edição Enterprise. O teste `operadorCancelaPorVariavelERetryECompensa` cobre esse fluxo.
+
+A outra saída é a modificação de instância por REST:
 
 ```bash
 bash scripts/compensar.sh <propostaId>

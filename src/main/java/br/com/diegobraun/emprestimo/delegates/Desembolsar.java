@@ -22,6 +22,10 @@ public class Desembolsar implements JavaDelegate {
     public void execute(DelegateExecution execution) {
         String propostaId = execution.getProcessBusinessKey();
         String conta = Variaveis.texto(execution, "contaDestino");
+        if (Variaveis.sim(execution, "cancelarDesembolso")) {
+            acompanhamento.registrar(propostaId, "operador cancelou o desembolso pelo Cockpit");
+            throw new BpmnError("DESEMBOLSO_RECUSADO", "cancelado pelo operador");
+        }
         try {
             CoreBancario.Lancamento lancamento = core.creditar(propostaId + ":desembolso", conta, Variaveis.decimal(execution, "valor"));
             acompanhamento.registrar(propostaId, "desembolso de " + lancamento.valor().toPlainString() + " em " + conta);

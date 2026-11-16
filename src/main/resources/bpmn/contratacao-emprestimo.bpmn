@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_emprestimo" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.40.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.24.0">
+  <bpmn:process id="contratacao-emprestimo" name="Contratação de empréstimo" isExecutable="true" camunda:historyTimeToLive="P30D">
+    <bpmn:startEvent id="Inicio" name="Proposta recebida"><bpmn:outgoing>F1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="AnalisarCredito" name="Analisar crédito" camunda:delegateExpression="${analisarCredito}" camunda:asyncBefore="true"><bpmn:extensionElements><camunda:failedJobRetryTimeCycle>R3/PT3S</camunda:failedJobRetryTimeCycle></bpmn:extensionElements><bpmn:incoming>F1</bpmn:incoming><bpmn:outgoing>F2</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="GwDecisao" name="Decisão de crédito?" default="F5"><bpmn:incoming>F2</bpmn:incoming><bpmn:outgoing>F3</bpmn:outgoing><bpmn:outgoing>F4</bpmn:outgoing><bpmn:outgoing>F5</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="DesfechoRecusadaCredito" name="Registrar recusa" camunda:delegateExpression="${registrarDesfecho}" camunda:asyncBefore="true"><bpmn:extensionElements><camunda:inputOutput><camunda:inputParameter name="desfecho">RECUSADA_CREDITO</camunda:inputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>F4</bpmn:incoming><bpmn:outgoing>F6</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="FimRecusadaCredito" name="Recusada pelo crédito"><bpmn:incoming>F6</bpmn:incoming></bpmn:endEvent>
+    <bpmn:userTask id="RevisarProposta" name="Revisar proposta" camunda:candidateGroups="analistas"><bpmn:extensionElements><camunda:formData><camunda:formField id="aprovadoManualmente" label="Aprovar proposta" type="boolean" defaultValue="false" /><camunda:formField id="parecer" label="Parecer" type="string"><camunda:validation><camunda:constraint name="required" /></camunda:validation></camunda:formField></camunda:formData></bpmn:extensionElements><bpmn:incoming>F5</bpmn:incoming><bpmn:outgoing>F7</bpmn:outgoing></bpmn:userTask>
+    <bpmn:exclusiveGateway id="GwAnalista" name="Analista aprovou?" default="F9"><bpmn:incoming>F7</bpmn:incoming><bpmn:outgoing>F8</bpmn:outgoing><bpmn:outgoing>F9</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="DesfechoRecusadaAnalista" name="Registrar recusa" camunda:delegateExpression="${registrarDesfecho}" camunda:asyncBefore="true"><bpmn:extensionElements><camunda:inputOutput><camunda:inputParameter name="desfecho">RECUSADA_ANALISTA</camunda:inputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>F9</bpmn:incoming><bpmn:outgoing>F10</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="FimRecusadaAnalista" name="Recusada pelo analista"><bpmn:incoming>F10</bpmn:incoming></bpmn:endEvent>
+    <bpmn:exclusiveGateway id="GwJuncao"><bpmn:incoming>F3</bpmn:incoming><bpmn:incoming>F8</bpmn:incoming><bpmn:outgoing>F11</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="ReservarLimite" name="Reservar limite" camunda:delegateExpression="${reservarLimite}" camunda:asyncBefore="true"><bpmn:extensionElements><camunda:failedJobRetryTimeCycle>R3/PT3S</camunda:failedJobRetryTimeCycle></bpmn:extensionElements><bpmn:incoming>F11</bpmn:incoming><bpmn:outgoing>F12</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="GerarContrato" name="Gerar contrato" camunda:delegateExpression="${gerarContrato}" camunda:asyncBefore="true"><bpmn:extensionElements><camunda:failedJobRetryTimeCycle>R3/PT3S</camunda:failedJobRetryTimeCycle></bpmn:extensionElements><bpmn:incoming>F12</bpmn:incoming><bpmn:outgoing>F13</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:receiveTask id="AguardarAssinatura" name="Aguardar assinatura" messageRef="Msg_ContratoAssinado"><bpmn:incoming>F13</bpmn:incoming><bpmn:outgoing>F14</bpmn:outgoing></bpmn:receiveTask>
+    <bpmn:serviceTask id="Desembolsar" name="Desembolsar" camunda:delegateExpression="${desembolsar}" camunda:asyncBefore="true"><bpmn:extensionElements><camunda:failedJobRetryTimeCycle>R3/PT3S</camunda:failedJobRetryTimeCycle></bpmn:extensionElements><bpmn:incoming>F14</bpmn:incoming><bpmn:outgoing>F15</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="AtivarContrato" name="Ativar contrato" camunda:delegateExpression="${ativarContrato}" camunda:asyncBefore="true"><bpmn:extensionElements><camunda:failedJobRetryTimeCycle>R5/PT3S</camunda:failedJobRetryTimeCycle></bpmn:extensionElements><bpmn:incoming>F15</bpmn:incoming><bpmn:outgoing>F16</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="DesfechoContratado" name="Registrar contratação" camunda:delegateExpression="${registrarDesfecho}" camunda:asyncBefore="true"><bpmn:extensionElements><camunda:inputOutput><camunda:inputParameter name="desfecho">CONTRATADO</camunda:inputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>F16</bpmn:incoming><bpmn:outgoing>F17</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="FimContratado" name="Empréstimo contratado"><bpmn:incoming>F17</bpmn:incoming></bpmn:endEvent>
+    <bpmn:serviceTask id="DesfechoSemLimite" name="Registrar recusa" camunda:delegateExpression="${registrarDesfecho}" camunda:asyncBefore="true"><bpmn:extensionElements><camunda:inputOutput><camunda:inputParameter name="desfecho">RECUSADA_LIMITE</camunda:inputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>F18</bpmn:incoming><bpmn:outgoing>F19</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="FimSemLimite" name="Sem limite"><bpmn:incoming>F19</bpmn:incoming></bpmn:endEvent>
+    <bpmn:intermediateThrowEvent id="CompensarContratoRecusado" name="Desfazer reserva"><bpmn:incoming>F26</bpmn:incoming><bpmn:outgoing>F27</bpmn:outgoing><bpmn:compensateEventDefinition id="CompensarContratoRecusado_def" /></bpmn:intermediateThrowEvent>
+    <bpmn:serviceTask id="DesfechoContratoRecusado" name="Registrar recusa do contrato" camunda:delegateExpression="${registrarDesfecho}" camunda:asyncBefore="true"><bpmn:extensionElements><camunda:inputOutput><camunda:inputParameter name="desfecho">RECUSADA_CONTRATO</camunda:inputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>F27</bpmn:incoming><bpmn:outgoing>F28</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="FimContratoRecusado" name="Contrato recusado"><bpmn:incoming>F28</bpmn:incoming></bpmn:endEvent>
+    <bpmn:intermediateThrowEvent id="CompensarExpirada" name="Desfazer reserva e contrato"><bpmn:incoming>F20</bpmn:incoming><bpmn:outgoing>F21</bpmn:outgoing><bpmn:compensateEventDefinition id="CompensarExpirada_def" /></bpmn:intermediateThrowEvent>
+    <bpmn:serviceTask id="DesfechoExpirada" name="Registrar expiração" camunda:delegateExpression="${registrarDesfecho}" camunda:asyncBefore="true"><bpmn:extensionElements><camunda:inputOutput><camunda:inputParameter name="desfecho">EXPIRADA</camunda:inputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>F21</bpmn:incoming><bpmn:outgoing>F22</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="FimExpirada" name="Assinatura expirada"><bpmn:incoming>F22</bpmn:incoming></bpmn:endEvent>
+    <bpmn:intermediateThrowEvent id="CompensarCancelada" name="Desfazer reserva e contrato"><bpmn:incoming>F23</bpmn:incoming><bpmn:outgoing>F24</bpmn:outgoing><bpmn:compensateEventDefinition id="CompensarCancelada_def" /></bpmn:intermediateThrowEvent>
+    <bpmn:serviceTask id="DesfechoCancelada" name="Registrar cancelamento" camunda:delegateExpression="${registrarDesfecho}" camunda:asyncBefore="true"><bpmn:extensionElements><camunda:inputOutput><camunda:inputParameter name="desfecho">CANCELADA_DESEMBOLSO</camunda:inputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>F24</bpmn:incoming><bpmn:outgoing>F25</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="FimCancelada" name="Cancelada"><bpmn:incoming>F25</bpmn:incoming></bpmn:endEvent>
+    <bpmn:serviceTask id="LiberarLimite" name="Liberar limite" isForCompensation="true" camunda:delegateExpression="${liberarLimite}"><bpmn:extensionElements><camunda:failedJobRetryTimeCycle>R5/PT3S</camunda:failedJobRetryTimeCycle></bpmn:extensionElements></bpmn:serviceTask>
+    <bpmn:serviceTask id="CancelarContrato" name="Cancelar contrato" isForCompensation="true" camunda:delegateExpression="${cancelarContrato}"><bpmn:extensionElements><camunda:failedJobRetryTimeCycle>R5/PT3S</camunda:failedJobRetryTimeCycle></bpmn:extensionElements></bpmn:serviceTask>
+    <bpmn:boundaryEvent id="ErroLimite" name="Limite insuficiente" attachedToRef="ReservarLimite"><bpmn:outgoing>F18</bpmn:outgoing><bpmn:errorEventDefinition id="ErroLimite_def" errorRef="Err_LimiteInsuficiente" /></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="CompReserva" attachedToRef="ReservarLimite"><bpmn:compensateEventDefinition id="CompReserva_def" /></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="ErroContrato" name="Contrato recusado" attachedToRef="GerarContrato"><bpmn:outgoing>F26</bpmn:outgoing><bpmn:errorEventDefinition id="ErroContrato_def" errorRef="Err_ContratoRecusado" /></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="CompContrato" attachedToRef="GerarContrato"><bpmn:compensateEventDefinition id="CompContrato_def" /></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="PrazoAssinatura" name="Prazo esgotado" attachedToRef="AguardarAssinatura"><bpmn:outgoing>F20</bpmn:outgoing><bpmn:timerEventDefinition id="PrazoAssinatura_def"><bpmn:timeDuration xsi:type="bpmn:tFormalExpression">${prazoAssinatura}</bpmn:timeDuration></bpmn:timerEventDefinition></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="ErroDesembolso" name="Desembolso recusado" attachedToRef="Desembolsar"><bpmn:outgoing>F23</bpmn:outgoing><bpmn:errorEventDefinition id="ErroDesembolso_def" errorRef="Err_DesembolsoRecusado" /></bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="F1" sourceRef="Inicio" targetRef="AnalisarCredito" />
+    <bpmn:sequenceFlow id="F2" sourceRef="AnalisarCredito" targetRef="GwDecisao" />
+    <bpmn:sequenceFlow id="F3" name="aprovada" sourceRef="GwDecisao" targetRef="GwJuncao"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${decisaoCredito == 'APROVADA'}</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F4" name="recusada" sourceRef="GwDecisao" targetRef="DesfechoRecusadaCredito"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${decisaoCredito == 'RECUSADA'}</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F5" name="revisão" sourceRef="GwDecisao" targetRef="RevisarProposta" />
+    <bpmn:sequenceFlow id="F6" sourceRef="DesfechoRecusadaCredito" targetRef="FimRecusadaCredito" />
+    <bpmn:sequenceFlow id="F7" sourceRef="RevisarProposta" targetRef="GwAnalista" />
+    <bpmn:sequenceFlow id="F8" name="sim" sourceRef="GwAnalista" targetRef="GwJuncao"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${aprovadoManualmente}</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F9" name="não" sourceRef="GwAnalista" targetRef="DesfechoRecusadaAnalista" />
+    <bpmn:sequenceFlow id="F10" sourceRef="DesfechoRecusadaAnalista" targetRef="FimRecusadaAnalista" />
+    <bpmn:sequenceFlow id="F11" sourceRef="GwJuncao" targetRef="ReservarLimite" />
+    <bpmn:sequenceFlow id="F12" sourceRef="ReservarLimite" targetRef="GerarContrato" />
+    <bpmn:sequenceFlow id="F13" sourceRef="GerarContrato" targetRef="AguardarAssinatura" />
+    <bpmn:sequenceFlow id="F14" sourceRef="AguardarAssinatura" targetRef="Desembolsar" />
+    <bpmn:sequenceFlow id="F15" sourceRef="Desembolsar" targetRef="AtivarContrato" />
+    <bpmn:sequenceFlow id="F16" sourceRef="AtivarContrato" targetRef="DesfechoContratado" />
+    <bpmn:sequenceFlow id="F17" sourceRef="DesfechoContratado" targetRef="FimContratado" />
+    <bpmn:sequenceFlow id="F18" sourceRef="ErroLimite" targetRef="DesfechoSemLimite" />
+    <bpmn:sequenceFlow id="F19" sourceRef="DesfechoSemLimite" targetRef="FimSemLimite" />
+    <bpmn:sequenceFlow id="F26" sourceRef="ErroContrato" targetRef="CompensarContratoRecusado" />
+    <bpmn:sequenceFlow id="F27" sourceRef="CompensarContratoRecusado" targetRef="DesfechoContratoRecusado" />
+    <bpmn:sequenceFlow id="F28" sourceRef="DesfechoContratoRecusado" targetRef="FimContratoRecusado" />
+    <bpmn:sequenceFlow id="F20" sourceRef="PrazoAssinatura" targetRef="CompensarExpirada" />
+    <bpmn:sequenceFlow id="F21" sourceRef="CompensarExpirada" targetRef="DesfechoExpirada" />
+    <bpmn:sequenceFlow id="F22" sourceRef="DesfechoExpirada" targetRef="FimExpirada" />
+    <bpmn:sequenceFlow id="F23" sourceRef="ErroDesembolso" targetRef="CompensarCancelada" />
+    <bpmn:sequenceFlow id="F24" sourceRef="CompensarCancelada" targetRef="DesfechoCancelada" />
+    <bpmn:sequenceFlow id="F25" sourceRef="DesfechoCancelada" targetRef="FimCancelada" />
+    <bpmn:association id="A1" associationDirection="One" sourceRef="CompReserva" targetRef="LiberarLimite" />
+    <bpmn:association id="A2" associationDirection="One" sourceRef="CompContrato" targetRef="CancelarContrato" />
+  </bpmn:process>
+  <bpmn:message id="Msg_ContratoAssinado" name="contrato-assinado" />
+  <bpmn:error id="Err_DesembolsoRecusado" name="Desembolso recusado" errorCode="DESEMBOLSO_RECUSADO" />
+  <bpmn:error id="Err_ContratoRecusado" name="Contrato recusado" errorCode="CONTRATO_RECUSADO" />
+  <bpmn:error id="Err_LimiteInsuficiente" name="Limite insuficiente" errorCode="LIMITE_INSUFICIENTE" />
+  <bpmndi:BPMNDiagram id="Diagrama"><bpmndi:BPMNPlane id="Plano" bpmnElement="contratacao-emprestimo">
+    <bpmndi:BPMNShape id="Inicio_di" bpmnElement="Inicio"><dc:Bounds x="152" y="182" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="AnalisarCredito_di" bpmnElement="AnalisarCredito"><dc:Bounds x="240" y="160" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="GwDecisao_di" bpmnElement="GwDecisao" isMarkerVisible="true"><dc:Bounds x="395" y="175" width="50" height="50" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="DesfechoRecusadaCredito_di" bpmnElement="DesfechoRecusadaCredito"><dc:Bounds x="480" y="40" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="FimRecusadaCredito_di" bpmnElement="FimRecusadaCredito"><dc:Bounds x="642" y="62" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="RevisarProposta_di" bpmnElement="RevisarProposta"><dc:Bounds x="480" y="300" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="GwAnalista_di" bpmnElement="GwAnalista" isMarkerVisible="true"><dc:Bounds x="625" y="315" width="50" height="50" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="DesfechoRecusadaAnalista_di" bpmnElement="DesfechoRecusadaAnalista"><dc:Bounds x="700" y="420" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="FimRecusadaAnalista_di" bpmnElement="FimRecusadaAnalista"><dc:Bounds x="862" y="442" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="GwJuncao_di" bpmnElement="GwJuncao" isMarkerVisible="true"><dc:Bounds x="705" y="175" width="50" height="50" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="ReservarLimite_di" bpmnElement="ReservarLimite"><dc:Bounds x="800" y="160" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="GerarContrato_di" bpmnElement="GerarContrato"><dc:Bounds x="960" y="160" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="AguardarAssinatura_di" bpmnElement="AguardarAssinatura"><dc:Bounds x="1120" y="160" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Desembolsar_di" bpmnElement="Desembolsar"><dc:Bounds x="1280" y="160" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="AtivarContrato_di" bpmnElement="AtivarContrato"><dc:Bounds x="1440" y="160" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="DesfechoContratado_di" bpmnElement="DesfechoContratado"><dc:Bounds x="1600" y="160" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="FimContratado_di" bpmnElement="FimContratado"><dc:Bounds x="1762" y="182" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="DesfechoSemLimite_di" bpmnElement="DesfechoSemLimite"><dc:Bounds x="860" y="40" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="FimSemLimite_di" bpmnElement="FimSemLimite"><dc:Bounds x="992" y="62" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="CompensarContratoRecusado_di" bpmnElement="CompensarContratoRecusado"><dc:Bounds x="1032" y="-58" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="DesfechoContratoRecusado_di" bpmnElement="DesfechoContratoRecusado"><dc:Bounds x="1100" y="-80" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="FimContratoRecusado_di" bpmnElement="FimContratoRecusado"><dc:Bounds x="1262" y="-58" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="CompensarExpirada_di" bpmnElement="CompensarExpirada"><dc:Bounds x="1152" y="562" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="DesfechoExpirada_di" bpmnElement="DesfechoExpirada"><dc:Bounds x="1240" y="540" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="FimExpirada_di" bpmnElement="FimExpirada"><dc:Bounds x="1402" y="562" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="CompensarCancelada_di" bpmnElement="CompensarCancelada"><dc:Bounds x="1312" y="442" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="DesfechoCancelada_di" bpmnElement="DesfechoCancelada"><dc:Bounds x="1400" y="420" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="FimCancelada_di" bpmnElement="FimCancelada"><dc:Bounds x="1562" y="442" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="LiberarLimite_di" bpmnElement="LiberarLimite"><dc:Bounds x="800" y="300" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="CancelarContrato_di" bpmnElement="CancelarContrato"><dc:Bounds x="960" y="300" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="ErroLimite_di" bpmnElement="ErroLimite"><dc:Bounds x="812" y="142" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="CompReserva_di" bpmnElement="CompReserva"><dc:Bounds x="832" y="222" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="ErroContrato_di" bpmnElement="ErroContrato"><dc:Bounds x="1032" y="142" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="CompContrato_di" bpmnElement="CompContrato"><dc:Bounds x="992" y="222" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="PrazoAssinatura_di" bpmnElement="PrazoAssinatura"><dc:Bounds x="1152" y="222" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="ErroDesembolso_di" bpmnElement="ErroDesembolso"><dc:Bounds x="1312" y="222" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1"><di:waypoint x="188" y="200" /><di:waypoint x="240" y="200" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2"><di:waypoint x="340" y="200" /><di:waypoint x="395" y="200" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F3_di" bpmnElement="F3"><di:waypoint x="445" y="200" /><di:waypoint x="705" y="200" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F4_di" bpmnElement="F4"><di:waypoint x="420" y="175" /><di:waypoint x="420" y="80" /><di:waypoint x="480" y="80" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F5_di" bpmnElement="F5"><di:waypoint x="420" y="225" /><di:waypoint x="420" y="340" /><di:waypoint x="480" y="340" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F6_di" bpmnElement="F6"><di:waypoint x="580" y="80" /><di:waypoint x="642" y="80" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F7_di" bpmnElement="F7"><di:waypoint x="580" y="340" /><di:waypoint x="625" y="340" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F8_di" bpmnElement="F8"><di:waypoint x="675" y="340" /><di:waypoint x="730" y="340" /><di:waypoint x="730" y="225" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F9_di" bpmnElement="F9"><di:waypoint x="650" y="365" /><di:waypoint x="650" y="460" /><di:waypoint x="700" y="460" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F10_di" bpmnElement="F10"><di:waypoint x="800" y="460" /><di:waypoint x="862" y="460" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F11_di" bpmnElement="F11"><di:waypoint x="755" y="200" /><di:waypoint x="800" y="200" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F12_di" bpmnElement="F12"><di:waypoint x="900" y="200" /><di:waypoint x="960" y="200" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F13_di" bpmnElement="F13"><di:waypoint x="1060" y="200" /><di:waypoint x="1120" y="200" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F14_di" bpmnElement="F14"><di:waypoint x="1220" y="200" /><di:waypoint x="1280" y="200" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F15_di" bpmnElement="F15"><di:waypoint x="1380" y="200" /><di:waypoint x="1440" y="200" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F16_di" bpmnElement="F16"><di:waypoint x="1540" y="200" /><di:waypoint x="1600" y="200" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F17_di" bpmnElement="F17"><di:waypoint x="1700" y="200" /><di:waypoint x="1762" y="200" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F18_di" bpmnElement="F18"><di:waypoint x="830" y="142" /><di:waypoint x="830" y="80" /><di:waypoint x="860" y="80" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F19_di" bpmnElement="F19"><di:waypoint x="960" y="80" /><di:waypoint x="992" y="80" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F26_di" bpmnElement="F26"><di:waypoint x="1050" y="142" /><di:waypoint x="1050" y="-22" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F27_di" bpmnElement="F27"><di:waypoint x="1068" y="-40" /><di:waypoint x="1100" y="-40" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F28_di" bpmnElement="F28"><di:waypoint x="1200" y="-40" /><di:waypoint x="1262" y="-40" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F20_di" bpmnElement="F20"><di:waypoint x="1170" y="258" /><di:waypoint x="1170" y="562" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F21_di" bpmnElement="F21"><di:waypoint x="1188" y="580" /><di:waypoint x="1240" y="580" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F22_di" bpmnElement="F22"><di:waypoint x="1340" y="580" /><di:waypoint x="1402" y="580" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F23_di" bpmnElement="F23"><di:waypoint x="1330" y="258" /><di:waypoint x="1330" y="442" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F24_di" bpmnElement="F24"><di:waypoint x="1348" y="460" /><di:waypoint x="1400" y="460" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F25_di" bpmnElement="F25"><di:waypoint x="1500" y="460" /><di:waypoint x="1562" y="460" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="A1_di" bpmnElement="A1"><di:waypoint x="850" y="258" /><di:waypoint x="850" y="300" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="A2_di" bpmnElement="A2"><di:waypoint x="1010" y="258" /><di:waypoint x="1010" y="300" /></bpmndi:BPMNEdge>
+  </bpmndi:BPMNPlane></bpmndi:BPMNDiagram>
+</bpmn:definitions>

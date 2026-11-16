@@ -1,0 +1,28 @@
+server:
+  port: 8086
+
+spring:
+  application:
+    name: emprestimo-saga-camunda7
+  datasource:
+    url: jdbc:h2:file:./target/camunda-h2;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ""
+
+camunda:
+  bpm:
+    admin-user:
+      id: demo
+      password: demo
+      first-name: Demo
+    filter:
+      create: Todas as tarefas
+    generic-properties:
+      properties:
+        history-time-to-live: P30D
+    database:
+      schema-update: true
+
+app:
+  prazo-assinatura-padrao: PT2M
+  limite-por-cliente: 100000
